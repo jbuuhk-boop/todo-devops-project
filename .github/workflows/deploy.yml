@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI-CD Pipeline
 
 on:
   push:
@@ -6,23 +6,39 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
 
     runs-on: ubuntu-latest
 
     steps:
 
+    # 1. جلب الكود من GitHub
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Login Docker Hub
+    # 2. تسجيل دخول Docker Hub
+    - name: Login to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Build Image
+    # 3. بناء صورة الفرونت اند
+    - name: Build Frontend Image
       run: |
         docker build -t hisham55990/todo-client:latest ./client
 
-    - name: Push Image
+    # 4. رفع الصورة إلى Docker Hub
+    - name: Push Frontend Image
       run: |
         docker push hisham55990/todo-client:latest
+
+    # 5. Deploy على EC2 عبر SSH
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ubuntu
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd /home/ubuntu/docker-compose-react-nodejs-postgres
+          docker compose pull
+          docker compose up -d
